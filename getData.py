@@ -39,30 +39,25 @@ def getDataFlame(COMP, YEAR):
     dfs = pd.read_html(url)
     playername = [
         n for n in soup.select("div.group_title")]
-    teamname = [n.get_text()
-                for n in soup.select("div.cp_middletitle")]
+
 
     dff = pd.DataFrame()
     for n in playername:
         df = pd.DataFrame([1])
-        df["name"] = n.find(
+        name=n.find(
             class_='gt_j').get_text(strip=True)
-        a = n.next_sibling.next_sibling
-        clubs_name = [b.previous_element.previous_element.previous_element.get_text(strip=True) for b in a.find_all(
-            class_="w4 leftline")]
-        clubs_link = [re.search(r'te=(\d+)', b.previous_element.previous_element.previous_element.previous_element.find("a").get("href")).group(1) for b in a.find_all(
-            class_="w4 leftline")]
-
-        clubs_name = list(dict.fromkeys(clubs_name))
-        clubs_link = list(dict.fromkeys(clubs_link))
-
-        for count, a in enumerate(clubs_name):
-            df[f"club{count}_name"] = a
-            df[f"club{count}_id"] = clubs_link[count]
-        df.drop([0], axis=1, inplace=True)
+        df["name"] = name
+        print(name)
+        
+        txt=""
+        if n.find(class_='gt_j').find("a") is not None:
+            url=n.find(class_='gt_j').find("a").get('href')
+            txt=re.findall(r"pl=.*",url)
+            txt=txt[0]
+            print(txt)
+            txt=txt[3:]
+        df["player_id"]=txt
         dff = pd.concat([dff, df])
-    dff["year"] = YEAR
-    dff["competition"] = COMP
     dff.reset_index(inplace=True, drop=True)
     return dff
 
@@ -70,27 +65,24 @@ def getDataFlame(COMP, YEAR):
 yearIDFile = "year.txt"
 
 compIDKey = ["j", "j2", "j3"]
-yearIDKey = Condition_load(yearIDFile)
+yearIDKey = ["2023","2022","2021","2020","2019","2018","2017"]
 
 
 countComp, countYear = 0, 0
 
 countAccess = 0
 df = pd.DataFrame()
-while countYear < len(yearIDKey):
-    countComp = 0
-    while countComp < len(compIDKey):
-        comp = compIDKey[countComp]
-        year = yearIDKey.iat[countYear, 1]
+for year in yearIDKey:
+    for comp in compIDKey:
         dfz = getDataFlame(comp, year)
         print(dfz)
         df = pd.concat([df, dfz])
         countAccess += 1
-        if countAccess >= 5:
+        if countAccess >= 15:
             df.reset_index(drop=True, inplace=True)
             df.to_pickle('./raw_playlog.pkl')
             df.to_csv('./raw_playlog.txt')
-            print('5リクエストを超えるため、30秒間停止')
+            print('15リクエストを超えるため、30秒間停止')
             time.sleep(30.1)
             countAccess = 0
         countComp += 1
